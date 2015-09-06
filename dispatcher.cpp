@@ -50,22 +50,14 @@ dispatcher::start_accept(){
 void 
 dispatcher::handle_accept(const boost::system::error_code &ec){
 	if(!ec){
-
+	
 		//check if rosbridge server is alive
 
-		//intiat the handshake with the rosBridge
-		boost::asio::read(client_socket_, buff_c, boost::asio::transfer_at_least(1),
-		 	boost::bind(&RosProxy::handle_handshak_req, this,
-		 				   boost::asio::placeholders::error)
-
-		 
-		 //forward it to the ros_proxy and get baq a reply from server
-
-		 //analize the reply and declare it connected if all good
-
+		
+		
 		connected_to_rosbrindge=true;
 
-
+		start_accept();
 		start_dispatching();
 	}
 }

@@ -10,10 +10,8 @@ using namespace boost::asio;
 
 RosProxy::RosProxy(unsigned short server_port):
 		acceptor_(io_service_, ip::tcp::endpoint( ip::tcp::v6(), client_port))
-		,client_socket_(io_service_)
 		,server_socket_(io_service_)
 		,resolver_(io_service_)
-		,client_port_(client_port)
 		,server_port_(server_port)
 		,serverInit(false)
 		{
@@ -78,7 +76,7 @@ void
 RosProxy::handle_connect(const boost::system::error_code &err)
 {
   if (! err) {
-	read_from_server_to_client();
+//	wiat for hand shake
   }
   else {
     disconnect("handle_connect", err.message().c_str());
@@ -99,9 +97,29 @@ RosProxy::handle_server_reads(const boost::system::error_code &ec){
   }
 
 }
+bool init_handshake(boost::asio::ip::tcp::socket client_socket_){
 
+	client_socket_=client_socket;
 
+	//intiat the handshake with the rosBridge
+		boost::asio::read(client_socket_, buff_c, boost::asio::transfer_at_least(1),
+	 	boost::bind(&RosProxy::handle_handshak_req, this,
+	 				   boost::asio::placeholders::error);
+//todo:check the msg to confirm
+	 	write_to_server();
 
+	 	boost::asio::read(client_server_, buff_s, boost::asio::transfer_at_least(1),
+	 	boost::bind(&RosProxy::handle_handshak_req, this,
+	 				   boost::asio::placeholders::error);
+
+	 	write_to_socket(client_socket_);
+
+	 	read_from_server_to_client();
+
+//check if success and return accourdingly
+	 	return true;
+
+}
 void
 RosProxy::read_from_server_to_client(){
 
@@ -136,7 +154,7 @@ RosProxy::write_to_server()
   
 }
 void
-RosProxy::write_to_client()
+RosProxy::write_to_socket(boost::asio::ip::tcp::socket socket)
 {
 	boost::system::error_code ec;
 	std::string s="";  
@@ -150,7 +168,7 @@ RosProxy::write_to_client()
 	std::cout << t;
 	std::cout << "bytes \n!";
 
- 	boost::asio::write(client_socket_,boost::asio::buffer(s) , ec);
+ 	boost::asio::write(socket,boost::asio::buffer(s) , ec);
 	if(ec){
 	  		std::cout << "Failed to write! \n";
 	  }
