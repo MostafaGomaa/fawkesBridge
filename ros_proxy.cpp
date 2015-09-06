@@ -8,7 +8,7 @@ using namespace boost::asio;
 
 
 
-RosProxy::RosProxy(unsigned short client_port,unsigned short server_port):
+RosProxy::RosProxy(unsigned short server_port):
 		acceptor_(io_service_, ip::tcp::endpoint( ip::tcp::v6(), client_port))
 		,client_socket_(io_service_)
 		,server_socket_(io_service_)
@@ -17,13 +17,8 @@ RosProxy::RosProxy(unsigned short client_port,unsigned short server_port):
 		,server_port_(server_port)
 		,serverInit(false)
 		{
-
-		system("startRosbridge.sh"); 
-		  
-		 acceptor_.set_option(socket_base::reuse_address(true));
-		start_accept();
+		start_server();
 		this->io_service_.run();
-		
 }
 
 
@@ -31,8 +26,6 @@ RosProxy::RosProxy(unsigned short client_port,unsigned short server_port):
 RosProxy::~RosProxy()
 {
 	boost::system::error_code err;
-  	client_socket_.shutdown(ip::tcp::socket::shutdown_both, err);
-  	client_socket_.close();
   	server_socket_.shutdown(ip::tcp::socket::shutdown_both, err);
   	server_socket_.close();
   	io_service_.stop();
@@ -48,25 +41,9 @@ void RosProxy::disconnect(const char *where, const char *reason){
 	std::cout << *reason;
 
   boost::system::error_code ec;
-  client_socket_.shutdown(ip::tcp::socket::shutdown_both, ec);
-  client_socket_.close();
-  server_socket_.shutdown(ip::tcp::socket::shutdown_both, ec);
+   server_socket_.shutdown(ip::tcp::socket::shutdown_both, ec);
   server_socket_.close();
 
-}
-
-void
-RosProxy::start_accept(){
-	acceptor_.async_accept(client_socket_ ,boost::bind(&RosProxy::handle_accept, this,boost::asio::placeholders::error));
-}
-
-void 
-RosProxy::handle_accept(const boost::system::error_code &ec){
-	if(!ec){
-	start_server();
-	}
-
-	start_accept();
 }
 
 
@@ -102,7 +79,6 @@ RosProxy::handle_connect(const boost::system::error_code &err)
 {
   if (! err) {
 	read_from_server_to_client();
-	read_from_client_to_server();
   }
   else {
     disconnect("handle_connect", err.message().c_str());
@@ -124,18 +100,6 @@ RosProxy::handle_server_reads(const boost::system::error_code &ec){
 
 }
 
-void
-RosProxy::handle_client_reads(const boost::system::error_code &ec){
-
-	if(!ec){
-		write_to_server();
-		read_from_client_to_server();
-	}else {
-    disconnect("handle_client_reads", ec.message().c_str());
-  }
-
-}
-
 
 
 void
@@ -149,16 +113,6 @@ RosProxy::read_from_server_to_client(){
 
 }
 
-void
-RosProxy::read_from_client_to_server(){
-
-  std::cout << "Waiting to read from  client! \n";
-		boost::asio::async_read(client_socket_, buff_c,boost::asio::transfer_at_least(1),
-			boost::bind(&RosProxy::handle_client_reads, this,
-						   boost::asio::placeholders::error)
-			);
-
-}
 
 void
 RosProxy::write_to_server()
