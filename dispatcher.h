@@ -9,7 +9,7 @@
 
 class ros_proxy;
 
-class dispatcher{
+class Dispatcher{
 
 private:
 	boost::asio::io_service					io_service_;
@@ -32,12 +32,12 @@ private:
 
 public:
 
-	dispatcher(unsigned short client_port);
-	~dispatcher();
+	Dispatcher(unsigned short client_port,unsigned short server_port);
+	~Dispatcher();
 	
 	void start_accept();
 	void start_dispatching();
-	void disconnect(const char *where, const char *reason);
+	void Disconnect(const char *where, const char *reason);
 
 	void handle_accept(const boost::system::error_code &ec);
 

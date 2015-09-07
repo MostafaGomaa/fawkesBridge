@@ -9,11 +9,11 @@ using namespace boost::asio;
 
 
 
-dispatcher::dispatecher(unsigned short client_port,unsigned short client_port, unsigned short server_port):
+Dispatcher::Dispatecher(unsigned short client_port, unsigned short server_port):
 		acceptor_(io_service_, ip::tcp::endpoint( ip::tcp::v6(), client_port))
 		,client_socket_(io_service_)
 		,client_port_(client_port)
-		,ros_proxy_(new ros_proxy(server_port))
+		,server_port_(server_port)
 		{
 
 		acceptor_.set_option(socket_base::reuse_address(true));
@@ -24,7 +24,7 @@ dispatcher::dispatecher(unsigned short client_port,unsigned short client_port, u
 
 
 
-dispatcher::~dispatcher()
+Dispatcher::~Dispatcher()
 {
 	boost::system::error_code err;
   	client_socket_.shutdown(ip::tcp::socket::shutdown_both, err);
@@ -32,7 +32,7 @@ dispatcher::~dispatcher()
   	io_service_.stop();
   	
 }
-void dispatcher::disconnect(const char *where, const char *reason){
+void Dispatcher::disconnect(const char *where, const char *reason){
 
 	std::cout << "Disconnected From ";
 	std::cout << *where;
@@ -45,23 +45,34 @@ void dispatcher::disconnect(const char *where, const char *reason){
 }
 
 void
-dispatcher::start_accept(){
+Dispatcher::start_accept(){
 	acceptor_.async_accept(client_socket_ ,boost::bind(&RosProxy::handle_accept, this,boost::asio::placeholders::error));
 }
 
 void 
-dispatcher::handle_accept(const boost::system::error_code &ec){
+Dispatcher::handle_accept(const boost::system::error_code &ec){
 	if(!ec){
-		
-		connected_to_rosbrindge=ros_proxy_->init_handshake(client_socket_);
 
-		start_accept();
+		ros_proxy_= new ros_proxy(server_port_,this);//start the server after the check that everything is alright
+		
+		boost::system::error_code ec;
+		//intiat the handshake with the rosBridge
+		boost::asio::read(client_socket_, buff_c, boost::asio::transfer_at_least(1),ec);
+		
+		std::string s="";  
+		std::ostringstream ss;
+		ss << &buff_c;
+		s = ss.str();
+		connected_to_rosbrindge=ros_proxy_->init_handshake(s);
+
 		start_dispatching();
+		start_accept();
+		
 	}
 }
 
 void
-dispatcher::start_dispatching(){
+Dispatcher::start_dispatching(){
 	boost::asio::async_read(client_socket_, buff_c,boost::asio::transfer_at_least(1),
 			boost::bind(&RosProxy::handle_client_reads, this,
 						   boost::asio::placeholders::error)
@@ -70,7 +81,7 @@ dispatcher::start_dispatching(){
 
 
 void
-RosProxy::handle_client_reads(const boost::system::error_code &ec){
+Dispatcher::handle_client_reads(const boost::system::error_code &ec){
 
 	if(!ec){
 
@@ -79,11 +90,7 @@ RosProxy::handle_client_reads(const boost::system::error_code &ec){
 	ss << &buff_c;
 	req = ss.str();
 
-	//find out if it is a jasonmsg and breakeit down
-	//find where does it belonge
-
-	//std::string reply="";  
-	//call either the ROSwith or the fawkesAdapter and get a reply
+	//ALL THE JASON STUFF
 	
 	ros_proxy_->write_to_server(req);
 
@@ -95,24 +102,9 @@ RosProxy::handle_client_reads(const boost::system::error_code &ec){
 }
   
   
-}
-// void
-// RosProxy::write_to_client(std::string reply)
-// {
-// 	size_t t =boost::asio::buffer_size(boost::asio::buffer(reply));
 
-// 	std::cout << "Writing to client!";
-// 	std::cout << t;
-// 	std::cout << "bytes \n!";
 
-//  	boost::asio::write(client_socket_,boost::asio::buffer(reply) , ec);
-// 	if(ec){
-// 	  		std::cout << "Failed to write! \n";
-// 	  }
-  
-// }
+// int main(){
 
-int main(){
-
-	dispatcher dispatcher_=new dispatcher(8080,9090);
-}
+// 	dispatcher dispatcher_=new dispatcher(8080,9090);
+//}

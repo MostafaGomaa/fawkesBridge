@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 
+class Dispatcher;
 
 class RosProxy{
 
@@ -25,12 +26,13 @@ private:
 	boost::asio::streambuf buff_c;
 	boost::asio::streambuf buff_s;
 	
+	Dispatcher 							*dispatcher_;
 
 
 
 public:
 
-	RosProxy(unsigned short server_port);
+	RosProxy(unsigned short server_port, Dispatcher& dispatcher);
 	~RosProxy();
 	
 	void start_accept();
@@ -46,7 +48,7 @@ public:
 	void write_to_socket(boost::asio::ip::tcp::socket &socket);
 	void write_to_server(std::string req);
 
-	bool init_handshake(boost::asio::ip::tcp::socket &client_socket);
+	bool init_handshake(std::string msg);
 
 };
 
